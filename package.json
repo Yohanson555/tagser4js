@@ -1,0 +1,24 @@
+{
+  "name": "tagser4js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "nyc --reporter=html mocha",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yohanson555/tagser4js.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Yohanson555/tagser4js/issues"
+  },
+  "homepage": "https://github.com/Yohanson555/tagser4js#readme",
+  "dependencies": {
+    "esm": "^3.2.25",
+    "lodash": "^4.17.15"
+  }
+}
