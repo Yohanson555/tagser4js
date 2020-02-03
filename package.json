@@ -1,7 +1,7 @@
 {
   "name": "tagser4js",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.1",
+  "description": "Simple tag-based document parser.",
   "main": "index.js",
   "scripts": {
     "test": "nyc --reporter=html mocha",
@@ -11,7 +11,7 @@
     "type": "git",
     "url": "git+https://github.com/Yohanson555/tagser4js.git"
   },
-  "author": "",
+  "author": "Yohanson555",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Yohanson555/tagser4js/issues"

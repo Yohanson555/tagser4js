@@ -4,7 +4,7 @@ const Tagser = require('../src/tagser');
 const { TYPE_TEXT, TYPE_TAG } = require('../src/sup')
 
 describe('Testing correct sources', () => {
-  var tagser = new Tagser();
+  var tagser = new Tagser({});
 
   it('Only text', () => {
     let html = 'Simple text';
@@ -103,7 +103,7 @@ describe('Testing correct sources', () => {
 
     let attrs = list[0].attributes();
 
-    assert.equal(_.size(attrs),1);
+    assert.equal(_.size(attrs), 1);
     assert.equal(attrs.A.name, 'A');
     assert.equal(attrs.A.value, 'value');
   });
@@ -157,7 +157,7 @@ describe('Testing malformed sources', () => {
   it('Malformed tag', () => {
     let html = '< tag >';
     assert.throws(() => tagser.parse(html), {
-      message: `Error (3) on 1:1 Tag malformed`
+      message: `Error (3) on 1:2 Tag malformed`
     });
   });
 
@@ -165,7 +165,7 @@ describe('Testing malformed sources', () => {
     let html = '< />';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Error (3) on 1:1 Tag malformed`
+      message: `Error (3) on 1:2 Tag malformed`
     });
   });
 
@@ -173,7 +173,7 @@ describe('Testing malformed sources', () => {
     let html = '</tag>';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Error (5) on 1:1 Source document malformed`
+      message: `Error (5) on 1:2 Source document malformed`
     });
   });
 
@@ -181,7 +181,7 @@ describe('Testing malformed sources', () => {
     let html = '<tag#%^adf >';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Error (1) on 1:4 Wrong tag name character: #`
+      message: `Error (1) on 1:5 Wrong tag name character: #`
     });
   });
 
@@ -189,7 +189,7 @@ describe('Testing malformed sources', () => {
     let html = '<tag #%^>';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Error (3) on 1:5 Tag malformed`
+      message: `Error (3) on 1:6 Tag malformed`
     });
   });
 
@@ -197,7 +197,7 @@ describe('Testing malformed sources', () => {
     let html = '<tag / >';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Error (4) on 1:6 Wrong character given: " ". ">" awaits`
+      message: `Error (4) on 1:7 Wrong character given: " ". ">" awaits`
     });
   });
 
@@ -205,7 +205,7 @@ describe('Testing malformed sources', () => {
     let html = '<tag></tag1>';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Error (6) on 1:11 Wrong close tag: tag1`
+      message: `Error (6) on 1:12 Wrong close tag: tag1`
     });
   });
 
@@ -213,7 +213,7 @@ describe('Testing malformed sources', () => {
     let html = '<tag A%/>';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Error (3) on 1:6 Tag malformed`
+      message: `Error (3) on 1:7 Tag malformed`
     });
   });
 
@@ -221,7 +221,7 @@ describe('Testing malformed sources', () => {
     let html = '<tag B=/>';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Error (9) on 1:7 Attribute value malfromed: the attribute value should be a string`
+      message: `Error (9) on 1:8 Attribute value malfromed: the attribute value should be a string`
     });
   });
 
@@ -229,7 +229,7 @@ describe('Testing malformed sources', () => {
     let html = '<tag B=true/>';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Error (9) on 1:7 Attribute value malfromed: the attribute value should be a string`
+      message: `Error (9) on 1:8 Attribute value malfromed: the attribute value should be a string`
     });
   });
 
@@ -237,7 +237,7 @@ describe('Testing malformed sources', () => {
     let html = '<tag B=3456/>';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Error (9) on 1:7 Attribute value malfromed: the attribute value should be a string`
+      message: `Error (9) on 1:8 Attribute value malfromed: the attribute value should be a string`
     });
   });
 
@@ -245,7 +245,7 @@ describe('Testing malformed sources', () => {
     let html = '<tag B="" />';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Error (8) on 1:8 Attribute malformed: empty value`
+      message: `Error (8) on 1:9 Attribute malformed: empty value`
     });
   });
 
@@ -253,8 +253,123 @@ describe('Testing malformed sources', () => {
     let html = '<tag> tag body';
 
     assert.throws(() => tagser.parse(html), {
-      message: `Source document malformed.`
+      message: `Error (11) on 1:14 Unexpected end of tag "tag" (1:1)`
     });
+  });
+});
+
+describe('Testing EOS', () => {
+  let tagser = new Tagser();
+
+  it('Unexpected end of tag', () => {
+    let html = 'abc <tag> come body';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (11) on 1:19 Unexpected end of tag "tag" (1:5)`
+    });
+  });
+
+  it('Unexpected end of source #1', () => {
+    let html = 'abc <tag ';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (10) on 1:9 Unexpected end of source`
+    });
+  });
+
+  it('Unexpected end of source #2', () => {
+    let html = 'abc <tag atr';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (10) on 1:12 Unexpected end of source`
+    });
+  });
+
+  it('Unexpected end of source #3', () => {
+    let html = 'abc <tag atr=';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (10) on 1:13 Unexpected end of source`
+    });
+  });
+
+  it('Unexpected end of source #3.1', () => {
+    let html = 'abc <tag atr ';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (10) on 1:13 Unexpected end of source`
+    });
+  });
+
+
+  it('Unexpected end of source #4', () => {
+    let html = 'abc <tag atr="asd';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (10) on 1:17 Unexpected end of source`
+    });
+  });
+
+  it('Unexpected end of source #5', () => {
+    let html = 'abc <tag> body <';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (11) on 1:16 Unexpected end of tag "tag" (1:5)`
+    });
+  });
+
+  it('Unexpected end of source #6', () => {
+    let html = 'abc <tag> body </';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (10) on 1:17 Unexpected end of source`
+    });
+  });
+
+  it('Unexpected end of source #7', () => {
+    let html = 'abc <tag> body </tag';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (10) on 1:20 Unexpected end of source`
+    });
+  });
+
+  it('Unexpected end of source #7', () => {
+    let html = 'abc <tag> body </tag  ';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (10) on 1:22 Unexpected end of source`
+    });
+  });
+});
+
+describe('Testing ignoreCase option', () => {
+  let tagser = new Tagser();
+
+  it('different case tags with ignoreCase = null', () => {
+    let html = 'abc <tag> body </Tag> cba';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (6) on 1:21 Wrong close tag: Tag`
+    });
+  });
+
+  it('different case tags with ignoreCase = false', () => {
+    tagser.setOption('ignoreCase', false);
+
+    let html = 'abc <tag> body </Tag> cba';
+
+    assert.throws(() => tagser.parse(html), {
+      message: `Error (6) on 1:21 Wrong close tag: Tag`
+    });
+  });
+
+  it('different case tags with ignoreCase = true', () => {
+    tagser.setOption('ignoreCase', true);
+
+    let html = 'abc1 <tag> body2 </Tag> cba3';
+
+    assert.equal(tagser.parse(html).length, 3);
   });
 });
 

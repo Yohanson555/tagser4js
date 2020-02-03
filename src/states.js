@@ -30,6 +30,8 @@ const {
   ERROR_ATTR_NAME_EMPTY,
   ERROR_ATTR_VALUE_EMPTY,
   ERROR_ATTR_VALUE_MALFORMED,
+  ERROR_UNEXPECTED_EOS,
+  ERROR_END_OF_TAG,
   getError } = require('./const');
 
 const { NotifyMessage, ProcessMessage, InitMessage } = require('./messages');
@@ -47,23 +49,49 @@ class TagserState {
 /// ROOT STATE
 
 class RootState extends TagserState {
-  constructor(tagName) {
+  constructor(tag) {
     super();
     this.tags = [];
-    this._openedTag = tagName;
+    this._openedTag = tag || null;
     this._text;
     this._escape;
     this._opened;
   }
 
-  getName = () => 'RootState';
+  //getName() { return 'RootState'; }
 
-  process(msg) {
+  process(msg, context) {
     let charCode = msg.charCode;
 
     this._text = this._text || '';
+    if (charCode == CHAR_EOS) {
+      if (this._openedTag) {
+        return new TagserResult({
+          err: new TagserError({
+            code: ERROR_END_OF_TAG,
+            text: getError(ERROR_END_OF_TAG, {
+              "tag": this._openedTag.name(),
+              "line": this._openedTag.line(),
+              "symbol": this._openedTag.symbol(),
+            }),
+          }),
+        }); 
+      } 
 
-    if (this._opened == true) {
+      this._text = this._text.trim();
+
+      if (this._text) {
+        this.tags.push(new Tag({
+          name: '',
+          type: TYPE_TEXT,
+          body: this._text,
+          line: context.line,
+          symbol: context.symbol
+        }));
+
+        this._text = '';
+      }
+    } else if (this._opened === true) {
       this._opened = false;
 
       if (isAvailableCharacter(charCode)) {
@@ -74,7 +102,7 @@ class RootState extends TagserState {
       } else if (charCode == CHAR_SLASH) {
         if (this._openedTag) {
           return new TagserResult({
-            state: new CloseTag(this._openedTag),
+            state: new CloseTag(this._openedTag.name()),
             message: new InitMessage({ charCode }),
           });
         }
@@ -93,13 +121,6 @@ class RootState extends TagserState {
           })
         });
       }
-    } else if (charCode == CHAR_EOS) {
-      this._text = this._text.trim();
-
-      if (this._text) {
-        this.tags.push(new Tag('', TYPE_TEXT, this._text));
-        this._text = '';
-      }
     } else if (this._escape == true) {
       this._text += String.fromCharCode(charCode);
     } else if (charCode == CHAR_BACK_SLASH) {
@@ -110,7 +131,13 @@ class RootState extends TagserState {
       this._text = this._text.trim();
 
       if (this._text) {
-        this.tags.push(new Tag('', TYPE_TEXT, this._text));
+        this.tags.push(new Tag({
+          name: '',
+          type: TYPE_TEXT,
+          body: this._text,
+          line: context.line,
+          symbol: context.symbol
+        }));
         this._text = '';
       }
     } else {
@@ -135,8 +162,6 @@ class RootState extends TagserState {
             type: NOTIFY_CLOSE_TAG,
           }),
         });
-      default:
-        return null;
     }
 
     return null;
@@ -151,7 +176,7 @@ class TagState extends TagserState {
     this._tag = null;
   }
 
-  getName = () => 'TagState';
+  //getName() { return 'TagState'; }
 
   init(msg) {
     return new TagserResult({
@@ -163,7 +188,14 @@ class TagState extends TagserState {
   process(msg) {
     let charCode = msg.charCode;
 
-    if (isAvailableCharacter(charCode)) {
+    if (charCode == CHAR_EOS) {
+      return new TagserResult({
+        err: new TagserError({
+          code: ERROR_UNEXPECTED_EOS,
+          text: getError(ERROR_UNEXPECTED_EOS, null)
+        }),
+      });
+    } else if (isAvailableCharacter(charCode)) {
       return new TagserResult({
         state: new AttrState(),
         message: new InitMessage({ charCode }),
@@ -174,7 +206,7 @@ class TagState extends TagserState {
       });
     } else if (charCode == CHAR_CLOSE_BRACKET) {
       return new TagserResult({
-        state: new RootState(this._tag.name()),
+        state: new RootState(this._tag),
       });
     } else if (charCode == CHAR_SPACE) {
       return null;
@@ -188,12 +220,18 @@ class TagState extends TagserState {
     }
   }
 
-  notify(msg) {
+  notify(msg, context) {
     switch (msg.type) {
       case NOTIFY_TAG_NAME_RESULT:
         let tagName = msg.value != null ? msg.value.toString() : null;
 
-        this._tag = new Tag(tagName, TYPE_TAG);
+        this._tag = new Tag({
+          name: tagName,
+          type: TYPE_TAG,
+          line: context.line,
+          symbol: context.symbol
+        });
+
         return new TagserResult({
           message: new ProcessMessage(
             msg.charCode,
@@ -238,8 +276,6 @@ class TagState extends TagserState {
             value: this._tag,
           }),
         });
-      default:
-        return null;
     }
   }
 }
@@ -252,12 +288,19 @@ class TagNameState extends TagserState {
     this._name = '';
   }
 
-  getName = () => 'TagNameState';
+  //getName() { return 'TagNameState'; }
 
   process(msg) {
     let charCode = msg.charCode;
 
-    if (isAvailableCharacter(charCode)) {
+    if (charCode == CHAR_EOS) {
+      return new TagserResult({
+        err: new TagserError({
+          code: ERROR_UNEXPECTED_EOS,
+          text: getError(ERROR_UNEXPECTED_EOS, null)
+        }),
+      });
+    } else if (isAvailableCharacter(charCode)) {
       this._name += String.fromCharCode(charCode);
     } else if (charCode == CHAR_CLOSE_BRACKET ||
       charCode == CHAR_SPACE ||
@@ -294,7 +337,7 @@ class CloseTag extends TagserState {
     this._tagName = tagName;
   }
 
-  getName = () => 'CloseTag';
+  //getName() { return 'CloseTag'; }
 
   init(msg) {
     return new TagserResult({
@@ -306,8 +349,17 @@ class CloseTag extends TagserState {
     let charCode = msg.charCode;
 
     switch (charCode) {
+      case CHAR_EOS:
+        return new TagserResult({
+          err: new TagserError({
+            code: ERROR_UNEXPECTED_EOS,
+            text: getError(ERROR_UNEXPECTED_EOS, null)
+          }),
+        });
+
       case CHAR_SPACE:
         return null;
+
       case CHAR_CLOSE_BRACKET:
         return new TagserResult({
           pop: true,
@@ -315,15 +367,21 @@ class CloseTag extends TagserState {
             type: NOTIFY_CLOSE_TAG_FOUND,
           }),
         });
-      default:
-        return null;
     }
   }
 
-  notify(msg) {
+  notify(msg, context) {
     switch (msg.type) {
       case NOTIFY_TAG_NAME_RESULT:
-        if (msg.value !== this._tagName) {
+        let source = this._tagName;
+        let result = msg.value;
+
+        if (context.getOption('ignoreCase') === true) {
+          source = source.toLowerCase();
+          result = result.toLowerCase();
+        }
+
+        if (source !== result) {
 
           return new TagserResult({
             err: new TagserError({
@@ -336,9 +394,6 @@ class CloseTag extends TagserState {
         return new TagserResult({
           message: new ProcessMessage(msg.charCode),
         });
-
-      default:
-        return null;
     }
   }
 }
@@ -353,7 +408,7 @@ class AttrState extends TagserState {
     this._value;
   }
 
-  getName = () => 'AttrState';
+  //getName() { return 'AttrState'; }
 
   init(msg) {
     return new TagserResult({
@@ -363,15 +418,25 @@ class AttrState extends TagserState {
   }
 
   process(msg) {
-    if (msg.charCode == CHAR_EQUAL) {
+    let charCode = msg.charCode;
+
+    if (charCode == CHAR_EOS) {
+      return new TagserResult({
+        err: new TagserError({
+          code: ERROR_UNEXPECTED_EOS,
+          text: getError(ERROR_UNEXPECTED_EOS, null)
+        }),
+      });
+    } else if (charCode == CHAR_EQUAL) {
       return new TagserResult({
         state: new AttrValueState(),
       });
     }
+
     return new TagserResult({
       pop: true,
       message: new NotifyMessage({
-        charCode: msg.charCode,
+        charCode: charCode,
         type: NOTIFY_ATTR_RESULT,
         value: new TagAttribute({
           name: this._name,
@@ -382,12 +447,14 @@ class AttrState extends TagserState {
   }
 
   notify(msg) {
+    let charCode = msg.charCode;
+
     switch (msg.type) {
       case NOTIFY_ATTR_NAME_RESULT:
         let res = new TagserResult({});
 
         this._name = msg.value;
-        res.message = new ProcessMessage(msg.charCode);
+        res.message = new ProcessMessage(charCode);
 
         return res;
       case NOTIFY_ATTR_VALUE_RESULT:
@@ -403,8 +470,6 @@ class AttrState extends TagserState {
         }
 
         return null;
-      default:
-        return null;
     }
   }
 }
@@ -417,17 +482,26 @@ class AttrNameState extends TagserState {
     this._name = '';
   }
 
-  getName = () => 'AttrNameState';
+  //getName() { return 'AttrNameState'; }
 
   process(msg) {
-    if (isAvailableCharacter(msg.charCode)) {
-      this._name += String.fromCharCode(msg.charCode);
+    let charCode = msg.charCode;
+
+    if (charCode == CHAR_EOS) {
+      return new TagserResult({
+        err: new TagserError({
+          code: ERROR_UNEXPECTED_EOS,
+          text: getError(ERROR_UNEXPECTED_EOS, null)
+        }),
+      });
+    } else if (isAvailableCharacter(charCode)) {
+      this._name += String.fromCharCode(charCode);
     } else {
       return new TagserResult({
         pop: true,
         message: new NotifyMessage({
           type: NOTIFY_ATTR_NAME_RESULT,
-          charCode: msg.charCode,
+          charCode: charCode,
           value: this._name,
         }),
       });
@@ -448,14 +522,23 @@ class AttrValueState extends TagserState {
     this.isFirstChar = true;
   }
 
-  getName = () => 'AttrValueState';
+  //getName() { return 'AttrValueState'; }
 
   process(msg) {
-    if (this.isFirstChar) {
+    let charCode = msg.charCode;
+
+    if (charCode == CHAR_EOS) {
+      return new TagserResult({
+        err: new TagserError({
+          code: ERROR_UNEXPECTED_EOS,
+          text: getError(ERROR_UNEXPECTED_EOS, null)
+        }),
+      });
+    } else if (this.isFirstChar) {
       this.isFirstChar = false;
 
-      if (msg.charCode == CHAR_QUOTE || msg.charCode == CHAR_SINGLE_QUOTE) {
-        this._quote = msg.charCode;
+      if (charCode == CHAR_QUOTE || charCode == CHAR_SINGLE_QUOTE) {
+        this._quote = charCode;
       } else {
         return new TagserResult({
           err: new TagserError({
@@ -465,17 +548,17 @@ class AttrValueState extends TagserState {
         });
       }
     } else {
-      if (msg.charCode == this._quote) {
+      if (charCode == this._quote) {
         return new TagserResult({
           pop: true,
           message: new NotifyMessage({
             type: NOTIFY_ATTR_VALUE_RESULT,
             value: this._value,
-            charCode: msg.charCode
+            charCode: charCode
           }),
         });
       } else {
-        this._value += String.fromCharCode(msg.charCode);
+        this._value += String.fromCharCode(charCode);
       }
     }
 
@@ -486,24 +569,35 @@ class AttrValueState extends TagserState {
 /// GET CLOSE BRACKET STATE
 
 class GetCloseBracket extends TagserState {
-  getName = () => 'GetCloseBracket';
+  //getName() { return 'GetCloseBracket'; }
 
   process(msg) {
-    switch (msg.charCode) {
+    let charCode = msg.charCode;
+
+    switch (charCode) {
+      case CHAR_EOS:
+        return new TagserResult({
+          err: new TagserError({
+            code: ERROR_UNEXPECTED_EOS,
+            text: getError(ERROR_UNEXPECTED_EOS, null)
+          }),
+        });
+
       case CHAR_CLOSE_BRACKET:
         return new TagserResult({
           pop: true,
           message: new NotifyMessage({
-            charCode: msg.charCode,
+            charCode: charCode,
             type: NOTIFY_CLOSE_BRACKET_FOUND,
           })
         });
+
       default:
         return new TagserResult({
           err: new TagserError({
             code: ERROR_WRONG_CHARACTER_GIVEN,
             text: getError(ERROR_WRONG_CHARACTER_GIVEN, {
-              'char': String.fromCharCode(msg.charCode),
+              'char': String.fromCharCode(charCode),
               'await': '>'
             })
           })

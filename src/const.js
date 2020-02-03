@@ -32,6 +32,8 @@ const ERROR_WRONG_CLOSE_TAG = 6;
 const ERROR_ATTR_NAME_EMPTY = 7;
 const ERROR_ATTR_VALUE_EMPTY = 8;
 const ERROR_ATTR_VALUE_MALFORMED = 9;
+const ERROR_UNEXPECTED_EOS = 10;
+const ERROR_END_OF_TAG = 11;
 
 const messages = {
   1: "Wrong tag name character: {{char}}",
@@ -43,6 +45,8 @@ const messages = {
   7: "Attribute malformed: empty name",
   8: "Attribute malformed: empty value",
   9: "Attribute value malfromed: the attribute value should be a string",
+  10: "Unexpected end of source",
+  11: "Unexpected end of tag \"{{tag}}\" ({{line}}:{{symbol}})",
 };
 
 
@@ -73,6 +77,7 @@ module.exports = {
   CHAR_EQUAL,
   CHAR_EXCL_MARK,
   CHAR_EOS,
+  
   NOTIFY_TAG_NAME_RESULT,
   NOTIFY_ATTR_RESULT,
   NOTIFY_CLOSE_BRACKET_FOUND,
@@ -82,6 +87,7 @@ module.exports = {
   NOTIFY_ATTR_NAME_RESULT,
   NOTIFY_ATTR_VALUE_RESULT,
   NOTIFY_CLOSE_TAG,
+
   ERROR_WRONG_TAG_CHARACTER,
   ERROR_EMPTY_TAG_NAME,
   ERROR_TAG_MALFORMED,
@@ -91,6 +97,9 @@ module.exports = {
   ERROR_ATTR_NAME_EMPTY,
   ERROR_ATTR_VALUE_EMPTY,
   ERROR_ATTR_VALUE_MALFORMED,
+  ERROR_UNEXPECTED_EOS,
+  ERROR_END_OF_TAG,
+
   getError
 };
 

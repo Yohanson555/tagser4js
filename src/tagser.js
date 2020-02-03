@@ -2,38 +2,49 @@ const _ = require('lodash');
 const RootState = require('./states');
 const { ProcessMessage } = require('./messages');
 const { CHAR_EOS } = require('./const');
+const { TagserContext } = require('./sup');
 
 class Tagser {
-  constructor() {
+  constructor(options) {
     this._stack = [];
     this._line = 0; // template lining support
     this._symbol = 0;
+    this.options = {
+      'ignoreCase': false,
+    };
 
-    this.currentLine = () => this._line + 1;
+    if (options) {
+      this.options = { ...this.options, ...options }; 
+    }
   }
 
   parse(source) {
     this._stack = [];
     this._stack.push(new RootState(null));
 
+    let context = new TagserContext(this.options);
+
     if (source && typeof source === 'string') {
       let lines = source.split('\n');
 
       for (var l = 0; l < lines.length; l++) {
-        this._line = l;
+        this._line = l + 1;
         let line = lines[l];
 
         for (var i = 0; i < line.length; i++) {
-          this._symbol = i;
+          this._symbol = i + 1;
           let charCode = line.charCodeAt(i);
 
           //console.log(`Pocessing char "${String.fromCharCode(charCode)}"; State - ${_.last(this._stack).getName()}`);
 
-          this._process(new ProcessMessage(charCode));
+          context.line = this._line;
+          context.symbol = this._symbol;
+
+          this._process(new ProcessMessage(charCode), context);
         }
       }
 
-      this._process(new ProcessMessage(CHAR_EOS));
+      this._process(new ProcessMessage(CHAR_EOS), context);
 
       let state = _.last(this._stack);
 
@@ -47,21 +58,21 @@ class Tagser {
     return null;
   }
 
-  _process(msg) {
+  _process(msg, context) {
     let state = _.last(this._stack)
 
     if (state != null && state.canAcceptMessage(msg)) {
-      let res = state[msg.getName()](msg);
+      let res = state[msg.getName()](msg, context);
 
       if (res != null) {
-        this._processResult(res);
+        this._processResult(res, context);
       }
     } else {
       throw new Error(`State ${state.getName()} cant accept message of type ${msg.getName()}`);
     }
   }
 
-  _processResult(r) {
+  _processResult(r, context) {
     if (r.result) {
       this._res += r.result;
     }
@@ -75,11 +86,11 @@ class Tagser {
     }
 
     if (r.message) {
-      this._process(r.message);
+      this._process(r.message, context);
     }
 
     if (r.err) {
-      let e = `Error (${r.err.code}) on ${this._currentLine()}:${this._symbol} ${r.err.text}`;
+      let e = `Error (${r.err.code}) on ${this._line}:${this._symbol} ${r.err.text}`;
 
       console.error(e);
 
@@ -93,6 +104,12 @@ class Tagser {
 
   _currentLine() {
     return this._line + 1;
+  }
+
+  setOption(name, value) {
+    if (name && typeof name === 'string') {
+      this.options[name] = value;
+    }
   }
 
 }

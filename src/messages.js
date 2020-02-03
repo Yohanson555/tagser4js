@@ -1,10 +1,12 @@
 class InitMessage {
-  constructor({value, charCode}) {
+  constructor({ value, charCode }) {
     this.value = value;
     this.charCode = charCode;
   }
 
-  getName = () => 'init';
+  getName() {
+    return 'init';
+  };
 }
 
 class ProcessMessage {
@@ -12,17 +14,21 @@ class ProcessMessage {
     this.charCode = charCode;
   }
 
-  getName = () => 'process';
+  getName() {
+    return 'process';
+  }
 }
 
 class NotifyMessage {
-  constructor({charCode, type, value}) {
+  constructor({ charCode, type, value }) {
     this.charCode = charCode;
     this.type = type;
     this.value = value;
   }
-  
-  getName = () => 'notify';
+
+  getName() {
+    return 'notify';
+  }
 }
 
 module.exports = {
