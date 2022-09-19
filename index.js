@@ -1,1 +1,1 @@
-module.exports = require('./src/tagser');
+module.exports = require('./dist/tagser');
