@@ -1,6 +1,7 @@
 export const CHAR_BACK_SLASH = 92; // \
 export const CHAR_SLASH = 47; // /
 export const CHAR_ENTER = 10; // '\n'
+export const CHAR_NEWLINE = 13; // '\r'
 export const CHAR_SPACE = 32; // ' '
 export const CHAR_OPEN_BRACKET = 60; // <
 export const CHAR_CLOSE_BRACKET = 62; // >

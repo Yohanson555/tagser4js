@@ -27,22 +27,20 @@ class Tagser {
     let context = new TagserContext(this.options);
 
     if (source && typeof source === "string") {
-      let lines = source.split("\n");
+      this._line = 1;
 
-      for (var l = 0; l < lines.length; l++) {
-        this._line = l + 1;
-        let line = lines[l];
+      for (var i = 0; i < source.length; i++) {
+        this._symbol = i + 1;
+        let charCode = source.charCodeAt(i);
 
-        for (var i = 0; i < line.length; i++) {
-          this._symbol = i + 1;
-          let charCode = line.charCodeAt(i);
+        context.line = this._line;
+        context.symbol = this._symbol;
 
-          //console.log(`Pocessing char "${String.fromCharCode(charCode)}"; State - ${_.last(this._stack).getName()}`);
+        this._process(new ProcessMessage(charCode), context);
 
-          context.line = this._line;
-          context.symbol = this._symbol;
-
-          this._process(new ProcessMessage(charCode), context);
+        if (charCode == 13 || charCode == 10) {
+          this._line++;
+          this._symbol = 0;
         }
       }
 

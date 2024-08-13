@@ -6,7 +6,7 @@
 
 ## 1.0.2
 
-- Empty valued attributes now available. Example: ` attr="" `
+- Empty valued attributes now available. Example: `attr=""`
 
 ## 1.0.3
 
@@ -15,3 +15,15 @@
 ## 2.0.0
 
 - TypeScript migration
+
+## 2.0.1
+
+- Minor publish fix
+
+## 2.0.2
+
+- New line (\\n) problem fix
+
+## 2.0.3
+
+- Minor publish fix

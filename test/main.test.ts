@@ -46,7 +46,7 @@ describe("Testing correct sources", () => {
     assert.equal(list.length, 1);
     assert.equal(list[0].name(), "tag");
     assert.equal(list[0].type(), TYPE_TAG);
-    assert.equal(list[0].body(), '');
+    assert.equal(list[0].body(), "");
     assert.equal(list[0].childs().length, 0);
     assert.equal(_.size(list[0].attributes()), 0);
   });
@@ -59,7 +59,7 @@ describe("Testing correct sources", () => {
     assert.equal(list.length, 1);
     assert.equal(list[0].name(), "tag");
     assert.equal(list[0].type(), TYPE_TAG);
-    assert.equal(list[0].body(), '');
+    assert.equal(list[0].body(), "");
     assert.equal(list[0].childs().length, 0);
     assert.equal(_.size(list[0].attributes()), 0);
   });
@@ -491,3 +491,22 @@ describe("Testing html() method", () => {
     assert.equal(res, `<tag>some<br></br>body</tag>`);
   });
 });
+
+// describe("Testing parsing with \\n ", () => {
+//   let tagser = new Tagser({});
+
+//   it("testing html() on multyline block tag", () => {
+//     let html = `<tag>
+//     some
+//     body
+//     </tag>`;
+
+//     let tags = tagser.parse(html);
+//     let res = tagser.html(tags || []);
+
+//     console.log("result: ");
+//     console.log(res);
+
+//     assert(true);
+//   });
+// });
